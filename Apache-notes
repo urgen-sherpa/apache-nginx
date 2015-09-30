@@ -1,0 +1,571 @@
+Features:
+ 1. Most commonly implemented HTTPD Server online - since 1996
+ 2. Apache controls roughly 2/3 of the HTTP Server Space
+ 3. Renders Apache at roughly 4-to-5 times the number of MS IIS-controlled sites
+ 4. Project: httpd.apache.org
+ 5. Included as part of [BLS]AMP Stacks
+ 6. Extremely reliable
+ 7. Expedient
+ 8. Light
+ 9. Provides HTTP(S) Services
+10. Threaded (worker) MPM - Extremely scalable - For large-scale, multi-threaded, thread-safe deployments of Apache - Hybrid of Prefork and Threaded
+11. Non-Threaded (prefork) (Default) - Mode - Process per client request - Most-compatible with various libraries
+13. Spawned processes and | or threads can be dynamically:
+  a. Expanded
+  b. Contracted
+Note: Spelled-out in primary configuration file
+14. Integration with Scripting Engines: 
+  a. PHP
+  b. Perl
+  c. Python
+  d. Ruby
+  e. etc.
+15. Modular Support (Extensible): i.e. :
+  a. mod_ssl (HTTPS) - TLS
+  b. mod_asis - raw delivery of HTTP documents - contains full HTTP header info
+  c. mod_alias - URL mapping to various locations in the File System space
+16. Common Gateway Interface (CGI) Support - i.e. DBMS connectivity, etc.
+17. Content Derivation
+  a. mod_mime (file suffix) - content type is mapped to file suffix
+  b. mod_mime_magic (header bytes in files)
+18. Content Negotiation - i.e. Language Support - provides the client (HTTP Browser) with the appropriate language-based content
+19. Content compression on delivery: mod_deflate - gzip - this helps with scaling sites to large user-base
+Note: This splits the processing more equitabily of content between server and client and alleviates intermediary pipes
+20. Manipulate Environmental VARs based on the HTTP Request - 'setenvif'
+Note: Per connection, Apache maintains its own environmental variables
+Note: Apache environmental VARs drive communications between HTTP Client -> HTTP Server
+21. User Directories - i.e. $HOME/www - facilitates broader publishing of content outside of standard DocumentRoots 
+22. Apache Standard Per-site Logging
+  a. Access - Default Hits | Misses | etc.
+  b. Error - Misses | Server Errors
+23. Forensic Logging
+  a. 2-Entries per request
+  b. Includes full header request
+24. Redirection
+25. URL Rewriting - mod_rewrite - i.e. force SSL access for specific content areas
+  a. Supports Regular Expressions, conditions, stacks, etc.
+26. Distributed Authoring and Versioning (WebDAV)
+27. Reverse Proxy Server - facilitates front-end filtering 
+28. Authentication:
+  a. Basic HTTP - clear-text
+  b. Digest
+  c. PAM
+  d. DBM
+  e. MySQL
+  f. PostgreSQL
+  g. LDAP
+29. Infinite Scalability
+  a. Load-balancing N number of nodes
+  b. Reverse Proxying
+30. Load-Balancing - Modular
+31. Multi-Platform support - *Nix | Windows
+32. Virtual Hosts:
+  a. NameBased
+  b. IP-Based
+
+
+### Apache Defaults ###
+Features:
+ 1. Control over content access
+
+Tasks:
+ 1. Explore Defaults
+  a. Ubuntu | Debian Systems - '/etc/apache2' - Primary Config Container
+   a1. apache2.conf - primary configuration file
+
+  b. '000-default'
+   b1. 'DocumentRoot /var/www' - location from which to serve content
+   b2. 'ServerAdmin webmaster@localhost' - contact info. in the event of error
+   b3. 'DirectoryIndex index.htm' - Indicates default file to serve when no particular file is requested
+'
+ <Directory /var/www/>
+                Options Indexes MultiViews
+                AllowOverride None
+                Order allow,deny
+                allow from all
+        </Directory>
+'
+Note: '<Directory /var/www/>' - Directives flow downwards unless interrupted by lower-level '<Directory>' directive(s)
+
+'Indexes' - presents directory listing to the HTTP client
+'MultiViews' - Matches Similar Content
+'ExecCGI' - CGI Execution Permission
+'SymLinksIfOwnerMatch' - Follows Symlinks on the File System if the owner matches
+'FollowSymLinks' - Follows Symlinks
+
+'AllowOverride None' - Prohibits '.htaccess' Directives from overriding: CONF file directives
+Options Include: all | none | directive_type ...
+
+'Order allow,deny'
+'allow from all' - Permits access to content area from ALL HTTP clients
+Options Include: all | none | 127.0.0.1 ::1/128 192.168.75.0/24
+
+### URL to File System Mapping ###
+Features:
+ 1. Publish URL Paths to various locations in and outside of the File System
+ 2. Facilitates the consistent publishing of URLs to clients
+
+Alias | ScriptAlias (CGI)
+Tasks:
+ 1. Publish and Alias for a directory: 'pub1/' - Below DocumentRoot
+  a. 'Alias /public /var/www/pub1'
+  b. Restrict access at and below: '/var/www/pub1' with '<Directory>' entries
+
+ 2. Publish and Alias outside: DocumentRoot - Requires '<Directory>' entries
+  
+ 3. Use 'AliasMatch' with Regular Expressions (RegExes)
+  a. Re-route requests to PDF files to another directory
+  a1. 'AliasMatch ^/docs/(.*pdf) /var/www/docs2/$1'
+  a2. 'AliasMatch ^/docs/(.*(pdf|txt)) /var/www/docs2/$1' - matches TXT | PDF requests
+  a3. 'AliasMatch ^/docs/(.*) /var/www/docs2/$1' - re-routes ALL requests to: '/docs2
+  a4. 'AliasMatch ^/docs2/projectx/(.*) /var/www/projectx/docs/$1' - reverses directory request
+  a5. 'AliasMatch ^/(docs)/(projectx)/(.*) /var/www/$2/$1/$3' - same as above but variabilized
+  
+  a6. 'AliasMatch ^/(docs)/(projectx)/(.*\.txt) /var/www/$2/$1/TXT/$3'
+      'AliasMatch ^/(docs)/(projectx)/(.*\.pdf) /var/www/$2/$1/PDF/$3'''''
+Note: This draws TXT and PDF files from distinct directories
+Note: Other options include: 
+  a. 'Location' - Use When you Need NOT match File System Space
+  b. 'ScriptAlias' && 'ScriptAliasMatch' - CGI
+
+Redirection
+Features:
+ 1. Sends Client to new destination
+ 2. Updates Browser || HTTP Caller URL
+ 3. Remaps: URL-Path beginning with '/' to new URL (schemen and hostname | /path)'
+ 4. Implementation of: 'mod_alias' as: Redirect, RedirectMatch, RedirectPermanent, RedirectTemp
+ 5. Tasks precedence over: Alias && ScriptAlias regardless of Configuration location of Alias-based directives
+ 6. Default Status = 302 (Temporary) if unspecified
+ 7. Supports codes in the range of: 300-399 (standard redirection codes) && 410 - gone
+Note: If using code: 410, omitt URL ARG
+ 8. Common codes: 
+  a. 301 = permanent
+  b. 302 = temporary
+ 9. Usage: 'Redirect[Match|Permanent|Temp] [status] URL-path URL'
+10. Facilitates the broad distribution of content requests
+
+Tasks:
+ 1. Use Redirection
+Note: URI consists of:
+ 1. scheme - i.e. HTTP | FTP | ps | sftp etc.
+ 2. hostname - i.e. www.linuxcbt.internal | 192.168.75.104 | 127.0.0.1
+ 3. URL-Path - '/docs'
+
+  a. 'Redirect /docs /docs2' - redirection on the same server - uses same scheme://hostname
+  b. 'Redirect /docs http://192.168.75.104/docs' - sends client with 302 to remote system
+  c. 'Redirect /docs http://www.linuxcbt.internal/docs'
+  d. 'Redirect 301 /docs http://192.168.75.104/docs'
+
+ 2. Use RedirectMatch - supports RegExes
+  a. 'RedirectMatch (.*)\.doc $1.pdf' - applies .pdf substitution across the site
+  b. 'RedirectMatch /docs/(.*)\.doc /PDF/$1.pdf' - places client into '/PDF/' directory to fetch file
+  c. 'RedirectMatch /docs/(.*)\.doc http://www.linuxcbt.internal/PDF/$1.pdf'
+
+ 3. Use RedirectMatch in conjunction with Alias
+Note: Redirects take precedence over Aliases
+Note: However, the above RedirectMatch statement MUST match, otherwise, Alias statement wins
+
+
+### Apache Bindings ###
+Features:
+ 1. IPv[46]:Port -> Sockets
+ 2. Default Binds to ALL addresses and port 80
+  a. i.e. 192.168.75.92:80, 192.168.75.93:80
+ 3. Facilitates Virtual Hosting
+  a. Bindings are tagged to Virtual Host Containers
+ 4. 'Listen' - Key Directive
+Note: 'grep -i listen' - across Apache config files to determine where applicable
+Note: On Debian-systems, check: 'ports.conf'
+Note: Use: 'netstat -ntlp | grep -i apache | httpd'
+
+Tasks:
+ 1. Explore Defaults
+  a. 'ports.conf'
+   'NameVirtualHost *:80' - Facilitates bounded Virtual Hosts, including the Default Virtual Host: /etc/apache2/sites-enabled/000-default
+<VirtualHost *:80>
+
+ 2. Bind to Alternate Ports
+  a. 'Listen IP:Port'
+Note: If IPv6 use: 'Listen [IPv6_ADDR]:Port'
+Note: Ensure that additional addresses are bound to the network interface prior to reload of Apache, otherwise, Apache may fail to restart
+Note: If you use distinct socket references, i.e.: 'Listen IP:Port', then do so consistently across ALL available IP:Port combinations on the system, otherwise, Apache will throw an error in attempt to bind to the socket
+
+
+### Virtual Hosts ###
+Features:
+ 1. Multiple Websites, per-host (physical | virtual)
+ 2. IP-based - Distinct IP addresses per-host
+ 3. Name-Based - HTTP 1.1 - Request supplies desired target site
+  a. Shares resources (IPs) more efficiently
+ 
+
+Tasks:
+ 1. Explore environment
+  a. '<VirtualHost *:80>' - matches 'Listen' and | or 'NameVirtualHost' directives
+Note: Ensure that Name Resolution is properly configured for NameBased Hosting
+
+ 2. IP-Based Host
+  a. 'Listen IP:Port' - socket
+  b. Match the above socket to the Virtual Host container
+
+ 3. Name-Based Host
+  a. 'Listen IP:Port' - socket
+  b. 'NameVirtualHost socket'
+  c. 'ServerName FQDN'
+Note: Post first site, the above directives are important to distinguish sites within Apache
+
+
+### HTACCESS ###
+Features:
+ 1. Indirect site control via: FTP, SFTP, etc. - via clients i.e. Dreamweaver, FileZilla, etc.
+ 2. On-demand, configuration updates to your site(s) managed by Apache
+ 3. Useful in the event that you lack 'root' access to manipulate the server's configuration
+ 4. Substitue for: '<Directory></Directory>' Directives
+Note: We need NOT include '<Directory>' tags - because '.htaccess' files are per-directory
+ 5. Recursive control of directory branches
+ 6. Per-directory, granular control
+ 7. Caveat: Performance impact as Apache MUST read each '.htaccess' file per directory, per request
+ 8. Choice of file name - Driven by: 'AccessFileName' directive
+ 9. Permitted Directives are restricted by: 'AllowOverride' directive - specified in the server's main configuration
+10. Check Directive's: 'Context' line to determin '.htaccess' applicability - online docs
+11. Ideal for a shared web server environment
+
+
+Tasks:
+ 1. Ensure server-side environment to enable user-login
+  a. Create user for SFTP access to update '.htaccess'-related items
+
+ 2. Connect to mock-client and effect server changes
+
+Note: Every request via '.htaccess' generates disk I/O
+Note: Whereas, "<Directory>" blocks are cached upon Apache restart/reload
+
+
+### Content Negotiation ###
+Features:
+ 1. Responds to HTTP/1.1 Request Header Options
+  i.e. Accept-Language: en, Accept-Charset:utf8
+ 2. Presents client with best-match resources - HTTP/1.1
+  i.e. Alternate language, character set, media type, etc.
+ 3. Handled by in-build: 'mod_negotiation'
+ 4. Options are assigned, optionally, source quality (qs) values: range: 0(low) - 1(high) - floating point value
+ 5. Content is negotiate based on variants using 2-methods:
+  1. Type Maps - *.var file - includes variants
+  2. 'MultiViews' - server auto-searches for alternatives based on client request
+Note: Many pre-defined language-based alternatives exist
+i.e. resource = index.html, alternative = index.html.es
+Note: Customary to name .var file (type-map file) the same as the resource file:
+i.e. index.html -> index.html.var (logic to handle type maps)
+Note: Type-Map files take precedence over the original resource
+
+
+Tasks:
+ 1. Negotiate Content Based on Language - 'index.html.var'
+ 2. Examine MultiViews
+
+
+### Content Restrictions ###
+Features:
+ 1. Restricts access to content based on:
+  a. <Directory>
+  b. <Location> - URL - Web Space
+  c. <Files>
+  d. <Auth> - Authentication - related directives
+ 2. Default Config Restricts access to: '.htaccess', '.ht*' - 'apache2.conf'
+ 3. These are largely IP-based blocks of access to content
+ 4. By Default, Apache restricts, by honouring File System semantics, access to hidden files
+ 5. Facilitates the ability to publish some content externally and others internally
+
+Tasks:
+ 1. <Directory> # IP-based restriction
+  <Directory /home/site2/www/private>
+   Order allow,deny
+   Allow from 127.0.0.1 192.168.75.92 192.168.75.104
+  </Directory>
+
+ 2. Effectively take content offline from web space to facilitate File-System based updates
+  <Directory /home/site2/www/private>
+   Order deny,allow
+   Deny from all
+  </Directory>
+Note: Also consult: '<DirectoryMatch>' - to effect RegExes
+
+ 3. Use '<Location>' to restrict access to content
+  '<LocationMatch ^/priv>' - traps variants including, but not limited to: '/priv', '/private', '/privacy', 'privelege'
+
+<LocationMatch ^/priv>
+	Order deny,allow
+	Deny from all
+</LocationMatch>
+
+<Location ~ ^/priv>
+	Order deny,allow
+	Deny from all
+</Location>
+
+  4. Use '<Files>' to restrict access to content
+   '<Files ~ "\.(xls|doc|pdf|mdb)">
+	Order deny,allow
+	deny from all
+   </Files>
+
+ 5. Block access to hidden files
+<FilesMatch "\.">
+	Order deny,allow
+	deny from all
+   </FilesMatch>
+
+
+### Apache Conditions ###
+Features:
+ 1. Make decisions based on current conditions:
+  a. Modules available 
+  b. Remote HOST
+  c. Browser Type - User-Agent (HTTP Header Request)
+ 2. '<IfDefine> parameter' - Directives to be processed at server startup
+ 3. '<IfModule>' - Directives to be processed based on module existence - i.e. mod_ssl
+ 4. '<IfVersion>' - Directives processed based on version of Apache: 'httpd'
+ 5. 'SetEnvIf[NoCase]' - Sets Environmental VAR (per-request) based on:
+  a. HTTP Request Headers: i.e. 'User-Agent', 'Referer', 'Accept-Language'
+  b. Remote_(Addr|Host), Server_Addr, Request_(Method|Protocol), Request_URI
+  c. Predefined Environmental VARs using: 'SetEnvIf[NoCase]
+Note: Any Apache directive that supports: 'env=...' as an option, can be driven, conditionally, by: 'SetEnvIf[NoCase]'
+
+Tasks:
+ 1. Explore '<IfModule>'
+  a. 'apachectl -D DUMP_MODULES' - reveals loaded modules
+  b. 'cd /etc/apache2 && grep -R -i 'ifmodule' *' - searches for ALL instances of: 'ifmodule'
+
+ 2. Custom Log requests based on Referer - Real-Time Logging of Referer Matches
+  a. 'SetEnvIf Referer "site1.linuxcbt.internal" site1_referral' - sets 'site1_referral=1' (TRUE) if the HTTP Header Request contains a referer of: 'site1.linuxcbt.internal
+  b. 'CustomLog /var/log/apache2/site2.site1_referral.access.log combined env=site1_referral'
+
+
+### URL Rewriting with 'mod_rewrite.so' Engine ###
+Features:
+ 1. Changes URL or underlying request based on condition(s)
+  a. i.e. 'BrowserMatch MSIE IE' - mod_rewrite URL accordingly based on existent of environmental variable.
+Note: 'IE' VAR should exist only if client is using IE
+Note: User-Agent VAR can be forged by client: i.e. mobile
+ 2. Based on Perl Regular Expressions (RegExes)
+Note: Important characters are:
+  '.' - matches a single character
+  '*' - matches zero or more of the previous character: i.e. '.*'
+  '+' - matches one or more...
+  '?' - optional match
+  '[]' - character classes - i.e. '/prod[123]*'
+  '[^]' - character class negation
+  '()' - groups characters for assignation to backreferences - i.e .'/(prod|products)'
+  '^' - indexed at (begins with) the following
+
+ 3. Ability to parse:
+  a. HTTP Headers
+  b. Server VARs - i.e. %{HTTP_HOST}
+  c. Environmental VARs - i.e. 'IE'
+ 4. Stackable logic using one or more: 'RewriteCond', followed by :'RewriteRule'
+  i.e. RewriteCond ...
+       RewriteCond ...
+       RewriteRule ...
+ 5. Contexts: 
+  a. Server - 'apache2.conf' || 'httpd.conf' - top-level, inherited by underlying virtual hosts and other included config file  
+  b. Virtual Host (Ideal location) i.e. http://hostname/URI
+HTTP: - Scheme
+HOST: - Hostname
+URL-Path: /... - Basic rewrites operate here
+  c. '<Directory>'
+  d. '.htaccess'
+  
+RewriteRule - Basic Requirement - Takes 3 argument
+Usage: 'RewriteRule Pattern(URL-Path) Substitution [flag[s]]'
+Note: 'URL-Path' matches after HOST and before Query String
+i.e. http://site2.linuxcbt.internal/prod/index.php?pid=1&doc=2&user=current
+Note: 'Substitution'can be:
+  a. File System Path (mod_alias): i.e. 'RewriteRule ^/docs /usr/local/share/apache2/docs'
+Note: The above uses 'mod_rewrite' as 'mod_alias' - This is unnecessary, use: 'mod_alias' instead
+  b. Web Path: i.e. 'RewriteRule ^/docs$ /documents'
+Note: In this case, '/documents' exists beneath the DocumentRoot
+  c. Absolute URL: i.e. 'RewriteRule ^/docs$ http://www.linuxcbt.internal/docs [R]' - rewrites user's | client's browser URL to reflect new, absolute URL - this is tantamount to a 'Redirect'
+  d. No Change: '-' i.e. 'RewriteRule \.(jpg|png) - [E=image:1]' - this enables VAR for later usage
+
+Note: 'Flags' are optional, can be multiple [f1,f2,f3...] and include common options:
+  a. [NC] - Case-Insensitive
+  b. [E=Var:Value] - Setting of Environment VAR - Useful in: Logs, Other RewriteRules, CGI
+  c. [F] - Returns '403' to client, forbidding access to resource
+  d. [G] - Returns '410' to client, resource is no longer available
+  e. [R] - Returns redirect '300-399' to client
+Note: Consult mod_rewrite docs for more flags
+
+Tasks:
+ 1. Perform some basic rewrites
+  a. Ensure module is loaded
+  b. Update Virtual Host container
+   b1. 'RewriteEngine on' - Enables processing
+   b2. 'RewriteRule ^/index.html$ /index2.html' - Fetches new content, but does NOT redirect Browser
+   b3. 'RewriteRule ^/index.html$ /index2.html [R]' - Fetches new content, but DOES redirect Browser
+   b4. 'RewriteRule ^/docs$ http://www.linuxcbt.internal/docs'
+  
+
+### Backreferences ###
+Features:
+ 1. Tokenize portions of URL for re-use
+ 2. Tokens range from: $1..$9
+ 3. Uses: '()' to create tokens
+ 4. Per-server (apache2.conf | httpd.conf) and per-directory (.htaccess | <Directory>)
+Note: Normally placed at site-wide or virtual-host layer
+Note: Normally used to match: URL-Path
+
+Tasks:
+ 1. Rewrite: 'index.html' -> '/new/index.html'
+  a. 'RewriteRule ^/(index.html)$ /new/$1' - equivalent to a Redirect[Match]
+  b. 'RewriteRule ^/(index.html)$ /new/$1 [R]' - equivalent to a Redirect[Match] - Forces Redirect
+
+ 2. Rewrite: 'localhost/docs*' -> 'http://www.linuxcbt.internal/docs*'
+  a. 'RewriteRule ^(/docs.*)$ http://www.linuxcbt.internal$1' - Redirects: '/docs*' to remote server
+
+Note: Per-Directory (.htaccess && <Directory>), the matches are File-Path based as opposed to: URL-Path based
+
+
+### mod_rewrite RewriteCond ###
+Features:
+ 1. Stackability of Logic
+ 2. Rules are implicitly ANDed: Use '[OR]' to enable ORing
+ 3. On or more tests may be performed on the current request
+ 4. Supports backreferences using: '%N' - %1..%9
+ 5. RewriteCond ultimately terminate in: 'RewriteRule'
+ 6. Usage: 'RewriteCond TestString CondPattern (RegEx) [OR, ornext, NC, NV]'
+  a. TestString: 
+   a1. RewriteRule Backreferences ($1) from resulting RewriteRule
+   a2. RewriteCond (previous) Backreferences
+   a3. RewriteMap expansions
+   a4. Server VARs: %{HTTP_HOST}, %{REQUEST_URI, %{QUERY_STRING}
+   a5. Plain Text
+  b. Condition Pattern: Perl RegEx to match TestString
+Note: In the default configuration, ALL RewriteCond rules MUST match, in order for resulting: RewriteRule to be executed
+
+Tasks:
+ 1. Omit Localhost (127.0.x.y) from Apache Logs
+  a. 'RewriteCond %{REMOTE_ADDR} ^127\.0\.'
+  b. 'RewriteRule .* - [E=localnolog]' - Defines VAR to indicate request is from localhost
+  c. 'CustomLog /var/log/apache/access.log combined env=!localnolog' - logs ALL requests except those originating from localhost
+Note: Ensure that existing: 'CustomLog' entry is ineffective
+
+  d. Also omit requests from: '192.168.75.0' subnet
+   d1. 'RewriteCond %{REMOTE_ADDR} ^127\.0\. [OR]'
+   d2. 'RewriteCond %{REMOTE_ADDR} ^192\.168\.'
+   d3. ...
+
+ 2. Change default page (index) based on MSIE caller
+  a. 'RewriteCond %{HTTP_USER_AGENT} MSIE [NC]
+  b. 'RewriteRule ^/$ /index.ie.html [L,E=ielog]'
+  c. 'CustomLog /var/log/apache2/access.ie.log combined env=ielog'
+
+ 3. Trap other browsers to default log file
+  a. 'CustomLog /var/log/apache2/access.log combined env=!ielog'
+
+ 4. Force SSL for URL-Path: '/login'
+  a. 'RewriteCond %{REQUEST_URI} ^/login'
+  b. 'RewriteCond %{SERVER_PORT} !443'
+  c. 'RewriteRule .* https://%{HTTP_HOST}/login'
+
+  5. Retrofit previous example to use backreferences
+   a. 'RewriteCond %{REQUEST_URI} ^(/login.*)'
+   b. 'RewriteCond %{SERVER_PORT} !443'
+   c. 'RewriteRule .* https://%{HTTP_HOST}/%1'
+
+
+# mod_rewrite with %{QUERY_STRING} #
+Features:
+ 1. Reflects: name=value&name2=value2, etc. pairs
+ 2. Discarded by 'RewriteRule' by default if the target (substitution string) contains '?'
+ 3. If target omits query string, then original is preserved
+ 4. [QSA] (Query String Append) flag - carries Query String to Substituted URL
+
+Tasks:
+ 1. Rewrite URL with Query String without [QSA]
+  a. 'RewriteRule /login/(.+) /index2.html?qs=$1 [R]' - Generates new Query String with new request
+ 2. Preserve original Query String with [QSA]
+  a. 'RewriteRule /login/(.+) /index2.html?qs=$1 [R,QSA]' - preservers original Query String
+  b. 'RewriteRule ^(/)$ /index2.html?qs=$1 [R,QSA]'
+
+ 3. Send Client (HTTP Caller) to '/login' if Query String Contains 'login'
+  a. i.e. Request: 'http://localhost?action=login'
+   a1. 'RewriteCond %{QUERY_STRING} login'
+   a2. 'RewriteCond %{REQUEST_URI} '!^/login' - Ensure Client is NOT already in '/login'
+   a3. 'RewriteRule .* http://%{HTTP_HOST}/login'
+ Note: You can drop original query string in target (substitution) by appending: '?' to the end of your substitution
+   a3a. 'RewriteRule .* http://%{HTTP_HOST}/login?'
+
+ 4. Drop Query String if Request to: '/' (HomePage)
+  a. 'RewriteCond %{QUERY_STRING} '!^$' - Query_String = not empty
+  b. 'RewriteRule ^(/)$ /index2.html? [R]' - Strips original query string
+  b1. Optionally: 'RewriteRule ^(/)$ /? [R]' - Strips original query string to: '/'
+
+
+### RewriteLog - mod_rewrite's ability to LOG actions ###
+Features:
+ 1. Verbose Logging of mod_rewrite's actions
+ 2. Useful in debugging rewrite issues
+  a. Note: Server-wide 'Rewrite...' (apache2.conf | httpd.conf) options are NOT inherited by default by VirtualHosts
+ 3. Log Levels range from: 1(least) - 9(most) verbose
+ 4. Level = 0 disables logging - similar to setting: 'RewriteEngine off'
+ 5. Logs:
+  a. Remote Host - IP Address
+  b. Login Name (if exists) i.e. IDENT - Typically yields: '-'
+  c. HTTP AUTH name (if exists) - Typically yields: '-'
+  d. TimeStamp (Date & Time) of Request
+  e. Virtualhost and Virtualhost ID
+  f. RequestID/[subreq] - This is an ideal value to grep because it groups requests accordingly
+  g. Log entry severity level
+  h. Text message - entry regarding mod_rewrite's work
+
+Note: RewriteLog is resource-intensive, commensurate with the verbosity
+Note: Disable when not needed
+
+Tasks:
+ 1. Setup environment to Log @ Level 1 - Make some requests
+  a. 'RewriteLog ${APACHE_LOG_DIR}/000-default.rewrite.log'
+  b. 'RewriteLogLevel 1'
+  c. 'invoke-rc.d apache2 reload'
+Note: Requests will reflect references to: 'DirectoryIndex' and other Apache defaults
+i.e. 'DirectoryIndex index.htm index.html'
+
+ 2. Up Verbosity to LogLevel 3
+  a. 'RewriteLogLevel 3'
+Note: Each Log entry will reflect mod_rewrite's attempt to pattern match
+Note: Matches may or may not occur, but the Log reflects the attempt
+
+ 3. Up Verbosity to LogLevel 9
+  a. 'RewriteLogLevel 9'
+
+ 4. Disable RewriteLog until needed at a later time
+  a. 'RewriteLogLevel 0' || '#RewriteLogLevel 9'
+
+Note: If 'RewriteEngine off' - RewriteLogLevel has no impact
+
+
+### URL Rewriting of Clear-Text Requests -> SSL Requests ###
+Features:
+ 1. Ensure secure access to site areas: entire or specific: i.e. '/login'
+
+Tasks:
+ 1. Enable SSL on Server
+  a. 'ln -s /etc/apache2/sites-available/default-ssl /etc/apache2/sites-enabled'
+  b. 'ln -s /etc/apache2/mods-available/{ssl.conf,ssl.load} /etc/apache2/mods-enabled'
+  c. 'invoke-rc.d apache2 reload'
+
+Note: Clear-Text and SSL sites are driven by distinct Virtual Host containers
+Note: This means, that options in one context may not apply in the other: i.e. 'RewriteEngine On'
+Note: When operating both Clear-Text and SSL sites, consider your perspective
+
+ 2. Force: '/login.*' -> '000-default' - clear-text site
+  a. 'RewriteCond ${REQUEST_URI} ^(/login.*) '
+  b. 'RewriteCond %{SERVER_PORT} !443 '
+  c. 'RewriteRule .* https://%{HTTP_HOST/%1'
+ 
+ 3. Force: Entire Site to SSL
+  a. 'RewriteCond %{SERVER_PORT} !443'
+  b. 'RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI}'
+
+Note: Be mindful that contradictory rules across Clear-Text and SSL site containers may result in an infinite loop, eventually generating an error
+
+
