@@ -1,0 +1,257 @@
+# NginX #
+Features:
+ 1. Fast web server
+ 2. Reverse Proxy server
+ 3. SSL Termination point: i.e. client -> Net -> NginX (SSL Termination) -> Clear Text (HTTP) -> Internal (DMZ) instances
+ 4. Small footprint (<1MB (light) )
+ 5. Modular: i.e. Apache, RTMP module
+ 6. Processes are distributed similar to Apache: i.e.
+  a. Master process (user=root) - handles bindings and worker processes
+  b. Worker processes (user=www-data) - handles incoming client connections
+   b1. Each worker process can handle a configurable number (N) of simultaneous connection
+NOTE: Default=4 worker processes (Configurable). 
+ 7. Implemented via various packages:
+  a. light
+  b. full
+  c. extras
+
+Tasks:
+ 1. Search, Install && Explore the NginX configuration
+  a. 'aptitude search nginx'
+  b. 'aptitude install nginx-light'
+  c. 'dpkg -l | grep nginx'
+  d. 'dpkg -L nginx-common && dpkg -L nginx-light'
+
+ 2. Configuration containter: /etc/nginx
+  a. /etc/nginx/nginx.conf - primary config file
+   a1. Contains 2 sections: main && non-main(scope-level sections)
+NOTE: Directives whethere in 'main' or 'non-main' sections should be terminated with: ';'
+NOTE: 'user www-data;' - nginx also uses the same named group to run its worker processes: 'www-data'
+   a2. Default catchall LOG files for ALL sites: 
+       'access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;'
+   a3. Primary Directives Hiearchy
+    a3a. Includes various contexts:
+     a3a1. main
+     a3a2. events{ }
+     a3a3. http{ } - /etc/nginx/nginx.conf -> includes files from: /etc/nginx/sites-enabled/*
+       a3a3a. server {} - one or more may be defined within an 'http {} ' block to instantiate N number of servers
+        a3a3a1. location {} - URL web space which is auto-constructed upon request by client
+        NOTE: 'root ...' and 'location {}' together form the URL web space: i.e. http://linuxcbtubuserv1/index.html
+
+  b. /var/log/nginx - LOG container
+  c. /etc/logrotate.d/nginx - LOG rotation
+  d. /usr/sbin/nginx - primary daemon binary
+
+ 3. Remove Apache
+  a. 'aptitude remove apache2'
+
+ 4. Quick Management of 'nginx' daemon
+  a. 'nginx -v' - version dump
+  b. 'nginx -t' - test configuration
+  c. 'nginx -s (reload|stop|quit|reopen)'
+
+ 4. Bind to Multiple Ports - Default => TCP:80 && || TCP:443
+  a. 'listen [IP:]Port' - initiates various binds
+   a1. 'listen 8080 default_server' - IPv4 bind to ALL addresses
+   a2. 'listen [::]:8080 default_server ipv6only=on;' - IPv6 bind to ALL addresses
+
+  b. Create a separted 'server{}' that binds to: TCP:8080
+NOTE: This allows us to serve content from a different 'root'(DocumentRoot)
+   b1. Create new 'server{}' block
+  c. Repeate for: TCP:8081
+NOTE: Use non-standard ports if:
+  a. IPs are limited
+  b. IPs are limited and Internet-facing
+  c. Web service need not bind to: TCP:(80|443)
+
+NOTE: The same content can be served via different ports by simply adding: 'listen PORT' directives to the same: 'server {}' block configuration
+s
+
+ 5. Force IP:Port combinations
+  a. 'listen 192.168.75.190:8080' - this site (server{}) will NOT listen to loopback(127.0.0.1)
+  b. 'invoke-rc.d nginx restart' - to force distinct bind to IP:Port combination
+
+# NginX LOGs #
+Features:
+ 1. 'error_log' - traps issues concerning the operation of the server, etc.
+  a. Syslog-compliant - same levels supported
+   a1. debug,info,notice,warn,error,crit,alert,emerg
+
+ 2. 'access_log' - catchall for traffic for ALL sites (default) - hits | misses | redirects | etc.
+ 3. Similar to Apache's LOGs
+ 4. 'combined' format is the same used by Apache
+  a. VARs match Apache: i.e. '$bytes_sent', '$status', '$remote_ip', etc.
+ 5. LOGs are configurable on a per virtual host (server{}) basis or defaults to the catchall (/var/log/nginx/{error,acces}_log
+
+
+Tasks:
+ 1. Explore default 'error_log'
+  a. /var/log/nginx/error_log
+NOTE: the previous inability to instantiate the 'nginx' service|daemon resulted in messages reported at the: 'emerg' error
+  b. A variety of levels are reported
+   b1. 'notice' - server electively started || stopped
+   b2. 'emerg' - server is unable to bind to port(s) upon instantiation
+   b3. 'error' - content is not available
+
+ 2. Explore default 'access_log' - traffic is here
+  a. /var/log/nginx/access_log
+NOTE: Default VAR set => 'combined'
+i.e. 
+'192.168.75.190 - - [19/Mar/2015:05:29:13 +0000] "GET / HTTP/1.1" 200 11 "-" "curl/7.35.0" '
+#combined LOG format#
+'$remote_ip(client) - $user $time_of_request(local) $request_method $status $bytes_sent $referrer $user_agent
+
+ 3. Create Custom LOG format to track: userAgent && bytesSent
+  a. 'log_format userAgentBytesSent "$http_user_agent $bytes_sent"; ' - place within: 'http{}' block
+NOTE: This means the log_format... may be placed in: /etc/nginx/nginx.conf || within a vhost file: i.e. /etc/nginx/sites-available/default
+  b. Update: /etc/nginx/nginx.conf - within 'http{}' block to register the new 'log_format...'
+  c. Update various VHost(s) to support the new 'log_format...'
+  d. Test && reload
+   d1. 'nginx -t && nginx -s reload && ls -l /var/log/nginx/*user*log'
+  e. Generate traffic
+ 4. Trap 'combined' 'log_format...' for each distinct VHost
+  a. 'access_log /var/log/nginx/default-8080.access_log combined;'
+
+# Virtual Hosts (VHosts) #
+Features:
+ 1. Ability to serve various content from various locations: 
+i.e. site[123] -> /usr/share/nginx/site[123]
+ 2. Ability to conserve IP resources by sharing IPv[46] addresses (Host-Header Name-based VHost)
+ 3. Ability to use distinct addresses with distinct hosts (IP-based VHosts)
+ 4. Service of multiple clients |  purposes with fewer physical | virtual resources
+
+Tasks:
+ 1. Host-Header (Name-based) VHosts - share IP:Port combinations across disparate VHosts
+Caveat: This does NOT work with SSL sites (sharing of the same IP:Port combination) - use IP-based VHosts
+  a. Ensure the following are married to the: default VHost: /etc/nginx/sites-enabled/default
+   a1. Ensure: 'server_name' directive accepts connections to various names: linuxcbtubuserv1, linuxcbtubuserv1.linuxcbt.internal, localhost, 127.0.0.1, ::1, etc.
+  b. site1..N will have distinct: 'server_name' directives that drive traffic using HTTP/1.1 headers
+   b1. 'mkdir /usr/share/nginx/site1'
+   b2. 'cp /etc/nginx/sites-available/default /etc/nginx/site-available/site1'
+   b3. change key directives:
+    b3a. 'server_name siteN'
+    b3b. 'root /usr/share/nginx/siteN'
+    b3c. 'access_log /var/log/nginx/siteN.access_log'
+    b3d. remove 'listen' directives as they are already configured in the: 'default' VHost
+
+2. IP-based VHost
+  a. 'listen IP:Port' - per 'server{}' - block
+  b. 'invoke-rc.d nginx restart'
+
+
+# Location {} Directive #
+Features:
+ 1. Maps URL webspace to FS or remote location:
+  a. http://192.168.75.190/index.html -> /usr/share/nginx/html/index.html
+  b. http://192.168.75.190/test -> http://192.168.75.191/test - Proxy_Pass
+ 2. Similar to Apache's: 'Alias' directive + possibility to proxy oubtbound
+ 3. Prepends 'root $PATH' to 'location $PATH' - constructs new FULL $PATH
+  a. http://192.168.75.190/a/b/c/index.html -> root /usr/share/nginx/html/a/b/c/index.html
+ 4. Possibility to nest within existing: location {} directive
+ 5. Supports REGEXES: i.e. serve ALL .mp4 content from a particular directory
+ 6. Supports faster matches of the URL webspace if: '=' char is used: i.e. 'location = / { ... }'
+
+Examples within a particular: 'server {}' context
+ a. 'location / { root /usr/share/nginx/site1; }' - server ALL content from FS
+ b. 'location /test { root /usr/share/nginx' - escapes the root for 'site1' -> /usr/share/nginx/site1
+NOTE: This constructs a local FS path of: /usr/share/nginx/test/index.html
+NOTE: A rewrite may be necessary to handle missing trailing '/'
+ c. 'location /images { root /usr/share; }' - provides shared '/images' path
+ d. 'location /test { proxy_pass http://192.168.75.10/test; " - proxies the connection to remote system transparently
+ e. 'location /old/url { return 301 http://192.168.75.10/old/url; } ' - redirect - no proxying
+ f. 'location ~ \.mp4$ { root /usr/share/nginx/media; }' - forces .mp4 files to be served from 1-directory
+ g. 'location ~ (\.mp4$|\.mov$) { root /usr/share/nginx/media; }' - force .mp4 && .mov to be served ""
+
+
+# Rewrites #
+Features:
+ 1. Alters URL accordingly (your rules)
+ 2. Rewrites are stacked
+  NOTE: If replacement (string) = http(s) - stack processing stops
+  NOTE: This happens because communications are handed to a remote server
+  NOTE: Flags can be used to stop processing: break, last
+ 3. Create non-existing FS space: i.e. 'rewrite /linuxcbt http://www.linuxcbt.com redirect;'
+ NOTE: This includes redirects to existing FS resources: i.e. /linuxcbt /linuxcbtnew
+ 4. REPLACEMENT may include tokens (VARs) from the matched REGEX: i.e. $1..$N
+NOTE: Tokens are created when '( )' are used to mask a portion of the REGEX: i.e. 
+'rewrite /test(.*) /newtest$1' - redirects /test.* -> /newtest.*
+Usage:
+ Format: 'rewrite REGEX REPLACEMENT [flag](last|break|redirect|permanent);' - general usage
+ Flags:
+  a. 'last' - stops processing  - searches for matching 'location' block: usually placed in: 'server{}' context
+  b. 'break' - stops processing sans looking for a location block: usually placed in: 'location{}' context
+  c. 'redirect' - 302 - temporary
+  d. 'permanent' - 301 - permanent
+ Contexts: server, location, if
+
+
+Tasks:
+ 1. Test a variety of rewrites in: server{} - context
+  a. 'rewrite /test/(.*) /test2/$1 break;' - takes any request below: /test and remaps(rewrites) to: /test2/(.*)
+NOTE: '/var/log/nginx/access.log' - still reflects original request
+  b. 'rewrite /linuxcbt http://www.linuxcbt.com;'
+  c. 'rewrite /(google|search) http://www.google.com;'
+  d. 'rewrite /contact.html /contact redirect;' - rewrites the URL to not show the suffix of the file
+  NOTE: This rule 'd' alone does NOT work. It needs rule that aliases: /contact -> /contact.html
+  e. 'rewrite /contact /contact.html last;' - final rewrite rule to serve: /contact.html -> /contact
+  f. 'rewrite /movies/(.*\..*$) /media/$1 last;' - shifts content to be requested from: /media 
+
+
+# Directory Indexes #
+Features:
+ 1. Provides directory listings of content 
+NOTE: Enabled when index file: index.htm[l] is not avaialable
+ 2. Contexts: http, server, location
+
+
+Tasks:
+ 1. Enable directory indexing on various directories
+  a. 'location / { autoindex on; } '
+NOTE: Commonly directory indexing is enabled|disabled on a per-directory basis
+
+NOTE: If set at higher level to on and unset at lower level, then lower level will be set to on;
+NOTE: If set at higher level to on and set at lower level to off, then lower level will override;
+
+
+# Access Control Methods #
+Features:
+ 1. Retricts access by:
+  a. IP
+  b. AUTH : i.e. basic AUTH
+ 2. Contexts: http, server, location, limit_except
+
+
+Tasks:
+ 1. IP : allow | deny
+  a. location / { }
+   deny 192.168.75.101;  
+   allow 192.168.75.0/24;
+   allow 127.0.0.1;   
+   deny all;
+ 
+ 2. Basic AUTH
+NOTE: Any tool that can generate crypt-compliant password: i.e. 'openssl', 'htpasswd', etc. can be used to create the htpasswd DB
+  a. 'server {}'
+   a1. 'auth_basic "restricted1";' - creates 'restricted1' realm
+   a2. 'auth_basic_user_file /etc/nginx/htpasswd;'
+  b. 'location / {}'
+   b1. 'auth_basic on;' - enables previously-defined AUTH in the current context
+  c. 'openssl passwd' - generate password and populate DB with: user:password pair(s)
+
+  d. 'curl -u app1:abc123 http://192.168.75.190' - fetch content with Basic AUTH client
+
+ 3. Use Both: IP && Basic AUTH
+  a. 'satisfy (any|all); ' - this helps NginX determine which or both AUTH mechanisms to use
+  b. Test access when: satisfy=any
+NOTE: Either IP or AUTH will suffice, however, if IP blocks, AUTH will still work
+NOTE: However, if you try to access content from an IP-blocked node, you will need AUTH in order to see content
+
+  c. Test access when: satisfy=all
+NOTE: Both forms: IP && AUTH are required
+NOTE: $SHELL-based HTTP clients cache as well as browsers so sometimes a new TTY is necessary to see the latest changes
+
+
+
+
+
