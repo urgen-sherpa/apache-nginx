@@ -1,0 +1,146 @@
+apt-get install nginx php5-fpm php5-mysql
+
+secure php(this tells php not to execute nearest file name match)
+vim /etc/php5/fpm/php.ini
+
+search cgi.fix and put below value
+cgi.fix_pathinfo=0
+
+sudo service php5-fpm restart
+
+vim /etc/nginx/sites-available/default
+
+server {
+
+root /var/www/html;
+index index.php;
+server_name example.com;
+
+		location / {
+		try_files $uri $uri/ /index.php?q=$uri&$args;
+		}
+
+		location ~\.php$ {
+				  try_files $uri=404;
+				  fastcgi_split_path_info ^(.+\.php)(/.+)$;
+				  fastcgi_pass  unix:/var/run/php5-fpm.sock;
+				  fastcgi_index index.php;
+				  fastcgi_param SCRIPT_FILENAME $document_rooot$fastcgi_script_name;
+				  include fastcgi_params;
+				}
+
+}
+
+
+### Force SSL settings on nginx with wordpress
+
+vim /etc/nginx/nginx.conf
+
+include /etc/nginx/conf.d/*.conf;
+..
+..
+ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
+
+
+
+## cat content of intermediate certificate /.pem file and append it to CRT file
+
+vim /etc/nginx/sites-available/default
+
+server {
+		listen 80;
+		server_name example.com www.example.com;
+		return 301 https://$server_name$request_uri;
+}
+
+server {
+		listen 443 ssl spdy;
+		add_header Strict-Transport-Security "max-age=31536000;
+		includeSubdomains";
+		root /var/www/html;
+		index index.php index.html index.htm;
+		server_name example.com;
+		ssl on;
+		ssl_certificate /etc/nginx/ssl/example.com.crt;
+		ssl_certificate_key /etc/nginx/ssl/example.com.key;
+        location / {
+				try_files $uri $uri/ /index.php?q=$uri&$args;	
+		}
+
+		location ~\.php$ {
+				  try_files $uri=404;
+				  fastcgi_split_path_info ^(.+\.php)(/.+)$;
+				  fastcgi_pass  unix:/var/run/php5-fpm.sock;
+				  fastcgi_index index.php;
+				  fastcgi_param SCRIPT_FILENAME $document_rooot$fastcgi_script_name;
+				  include fastcgi_params;
+				}
+}
+
+
+service nginx restart; service php5-fpm restart
+
+securing wordpress
+=========================
+useradd wp-user1
+chown -R wp-user1:wp-user1 /var/www/html
+
+ssh-keygen
+
+chown -R wp-user1:www-data /home/wp-user1/.ssh/
+chown 0640 /home/wp-user1/.ssh/
+cd /home/wp-user1/.ssh
+cat publickey > authorized_keys
+
+apt-get install php5-dev libssh2-1-dev libssh2-php
+
+edit wp-config.php
+paste below to the end of file
+/** SETS WORDPRESS SECURE LOGIN
+require_once(ABSPATH . 'wp-settings.php');
+define('FTP_PUBKEY','/home/wp-user1/wp_rsa.pub');
+define('FTP_PRIKEY','/home/wp-user1/wp_rsa');
+define('FTP_USER','wp-user1');
+define('FTP_PASS','');
+define('FTP_HOST','127.0.0.1:22');
+
+#RESTART nginx
+
+in wordpress go to updates..
+plugin name:-
+select below plugin..
+Akismet
+..update plugin..
+
+connection type 
+>FTP
+proceed
+
+#Done
+Restart php5-fpm nginx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
