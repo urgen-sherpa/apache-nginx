@@ -39,6 +39,7 @@ If you are still experiencing issues with memory then consider changing pm to on
 https://stackoverflow.com/questions/25097179/warning-pool-www-seems-busy-you-may-need-to-increase-pm-start-servers-or-pm/25098060#25098060
 
 #nginx error connect to php5-fpm.sock failed (13: Permission denied)
+---------------------------------------------------------------------
 
 Open /etc/php5/fpm/pool.d/www.conf
 Uncomment all permission lines, like:
@@ -52,6 +53,7 @@ Restart fpm -
 Note: if your webserver runs as user other than www-data, you will need to update the www.conf file accordingly
 
 # Increase file upload size limit in PHP-Nginx
+-----------------------------------------------
 
 vim /etc/php5/fpm/php.ini
 
