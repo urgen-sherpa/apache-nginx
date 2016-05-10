@@ -42,8 +42,34 @@ https://stackoverflow.com/questions/25097179/warning-pool-www-seems-busy-you-may
 
 Open /etc/php5/fpm/pool.d/www.conf
 Uncomment all permission lines, like:
-listen.owner = www-data
-listen.group = www-data
-listen.mode = 0660
-Restart fpm - sudo service php5-fpm restart
+
+    listen.owner = www-data
+    listen.group = www-data
+    listen.mode = 0660
+    
+Restart fpm - 
+    sudo service php5-fpm restart
 Note: if your webserver runs as user other than www-data, you will need to update the www.conf file accordingly
+
+# Increase file upload size limit in PHP-Nginx
+
+vim /etc/php5/fpm/php.ini
+
+    upload_max_filesize = 100M
+    post_max_size = 100M
+    #max_input_time; it is unlimited by default you can adjust if not
+post_max_size should always be larger than upload_max_filesize but for large numbers like 100M you can safely make them equal.
+
+Add following line to http{..} block in nginx config:
+
+    http   {
+	#...
+        client_max_body_size 100m;
+	#...
+    }
+    Note: For very large files, you may need to change value of client_body_timeout parameter. Default is 60s.
+    
+    service php5-fpm reload
+    service nginx reload
+    
+    
