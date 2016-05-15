@@ -1,0 +1,113 @@
+pip freeze > requirement.txt
+
+
+# requirement.txt
+
+Django==1.9.6
+django-crispy-forms==1.6.0
+django-registration-redux==1.4
+gunicorn==19.4.5
+pbr==1.9.1
+Pillow==3.2.0
+six==1.10.0
+stevedore==1.13.0
+virtualenv==15.0.1
+virtualenv-clone==0.2.6
+virtualenvwrapper==4.7.1
+
+pip install -r requirement.txt
+
+
+# django project directory and permissions
+
+ls -al /webapps/
+total 12
+drwxr-xr-x  3 sagarmatha sagarmatha  .
+drwxr-xr-x 28 root       root        ..
+drwxrwxr-x  8 sagarmatha sagarmatha  django19   #this is project dir
+
+/webapps/django19/<Django application>
+here DJ application name is "Untitled1"
+   
+
+####  cat /usr/bin/gunicorn_start   ####
+
+#!/bin/bash
+
+NAME="untitled1"                                  # Name of the application
+DJANGODIR=/webapps/django19                       # Django project directory
+SOCKFILE=/webapps/django19/run/gunicorn.sock      # we will communicte using this unix socket
+USER=sagarmatha                                   # the user to run as
+GROUP=sagarmatha                                  # the group to run as
+NUM_WORKERS=3                                     # how many worker processes should Gunicorn spawn
+DJANGO_SETTINGS_MODULE=untitled1.settings             # which settings file should Django use
+DJANGO_WSGI_MODULE=untitled1.wsgi                     # WSGI module name
+
+echo "Starting $NAME as `whoami`"
+
+# Activate the virtual environment
+cd $DJANGODIR
+source /home/sagarmatha/VE/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+
+# Create the run directory if it doesn't exist
+RUNDIR=$(dirname $SOCKFILE)
+test -d $RUNDIR || mkdir -p $RUNDIR
+
+# Start your Django Unicorn
+# Programs meant to be run under supervisor should not daemonize themselves (do not use --daemon)
+exec gunicorn ${DJANGO_WSGI_MODULE}:application \
+  --name $NAME \
+  --workers $NUM_WORKERS \
+  --user=$USER --group=$GROUP \
+  --bind=unix:$SOCKFILE \
+  --log-level=debug \
+  --log-file=-
+
+
+(VE) sagarmatha@sagarmatha:/webapps/django19$ ls -l
+total 64
+-rw-rw-r-- 1 sagarmatha sagarmatha 41984 May 15 11:53 db.sqlite3
+-rwxrwxr-x 1 sagarmatha sagarmatha   252 May 11 09:50 manage.py
+drwxrwxr-x 3 sagarmatha sagarmatha  4096 May 15 13:12 posts
+drwxrwxr-x 2 sagarmatha sagarmatha  4096 May 15 13:39 run
+drwxrwxr-x 3 sagarmatha sagarmatha  4096 May 15 10:54 static
+drwxrwxr-x 2 sagarmatha sagarmatha  4096 May 15 13:37 untitled1
+
+
+upstream django_app_server {
+server unix:/webapps/django19/run/gunicorn.sock fail_timeout=0;
+}
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+
+
+
+	index index.html index.htm index.nginx-debian.html;
+	server_name _;
+        location /static/ {
+         alias /webapps/django19/static/;
+        }
+
+        location /media/ {
+         alias /webapps/django19/media/;
+        }
+
+	location / {
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header Host $http_host;
+          proxy_redirect off;
+     if (!-f $request_filename) {
+            proxy_pass http://django_app_server;
+            break;
+        }
+	}
+
+}
+
+start gunicorn(django) and nginx
+
+/usr/local/bin/gunicorn_start
+service nginx restart
